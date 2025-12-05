@@ -8,9 +8,9 @@ import traceback
 
 # CONFIG
 BASE_FOLDER = "Dataset"
-OUTPUT_CSV = "tanpafacemesh/CLAHE_skin_dataset_results_new.csv"
+OUTPUT_CSV = "Ekstraksi/CLAHE_skin_dataset_results_new.csv"
 DEBUG_SAVE = True
-DEBUG_FOLDER = "debug_output_new"
+DEBUG_FOLDER = "debug_output"
 MIN_BBOX_SIZE = 30
 GRABCUT_ITER = 5
 PAD_RATIO = 0.20

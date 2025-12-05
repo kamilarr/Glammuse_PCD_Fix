@@ -11,7 +11,7 @@ def delta_e_cie76(lab1, lab2):
 
 # Load dataset
 df_foundation = pd.read_csv(r"Dataset/LAB-Dataset-Shades.csv")    
-df_skin = pd.read_csv(r"Evaluasi/evaluation_deltaE_Clahe.csv")  
+df_skin = pd.read_csv(r"Evaluasi/evaluation_deltaE_Clahe_new.csv")  
 
 # Convert OpenCV LAB ke True CIELAB
 df_skin["L_cielab"] = (df_skin["L_grabcut"] / 255.0) * 100
