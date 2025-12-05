@@ -46,13 +46,13 @@ def evaluate_file(extract_csv_path, output_path):
     merged.to_csv(output_path, index=False)
     print("Selesai! Disimpan ke:", output_path)
 
-# # Evaluasi 2 File Sekaligus
-# evaluate_file(
-#     extract_csv_path="Ekstraksi/HE_skin_dataset_results.csv",
-#     output_path="Evaluasi/evaluation_deltaE_HE.csv"
-# )
+# Evaluasi 2 File Sekaligus
+evaluate_file(
+    extract_csv_path="Ekstraksi/HE_skin_dataset_results_full.csv",
+    output_path="Evaluasi/evaluation_deltaE_HE.csv"
+)
 
 evaluate_file(
-    extract_csv_path="Ekstraksi/CLAHE_skin_dataset_results_new.csv",
-    output_path="Evaluasi/evaluation_deltaE_CLAHE_new.csv"
+    extract_csv_path="Ekstraksi/CLAHE_skin_dataset_results_new_ori.csv",
+    output_path="Evaluasi/evaluation_deltaE_CLAHE_new_ori.csv"
 )

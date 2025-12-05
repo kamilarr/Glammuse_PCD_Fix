@@ -8,9 +8,9 @@ import traceback
 
 # CONFIG
 BASE_FOLDER = "Dataset"
-OUTPUT_CSV = "Ekstraksi/CLAHE_skin_dataset_results_new.csv"
+OUTPUT_CSV = "Ekstraksi/CLAHE_skin_dataset_results_new_ori.csv"
 DEBUG_SAVE = True
-DEBUG_FOLDER = "debug_output"
+DEBUG_FOLDER = "debug_output_ekstraksiori"
 MIN_BBOX_SIZE = 30
 GRABCUT_ITER = 5
 PAD_RATIO = 0.20
@@ -304,7 +304,7 @@ def process_folder_to_csv(base_folder=BASE_FOLDER, output_csv=OUTPUT_CSV):
                 used_pixels = int(np.count_nonzero(final_mask))
 
                 # 8) Dominant color computed from CLAHE image masked by final_mask
-                dom = dominant_color(clahe_img, final_mask)
+                dom = dominant_color(img, final_mask)
                 if dom is None:
                     print("No skin pixels.")
                     rows.append([fname, label, None, None, None, None, None, None, "no_skin_pixels"])
