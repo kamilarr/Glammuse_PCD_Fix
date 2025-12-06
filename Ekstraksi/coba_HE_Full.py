@@ -343,133 +343,67 @@ def save_debug_visuals(
         base = os.path.join(DEBUG_FOLDER, label)
         os.makedirs(base, exist_ok=True)
 
-        # -------------------------------
-        # normalize input to 3-channel uint8 images same size as orig_img
-        # -------------------------------
         H, W = orig_img.shape[:2]
 
-        def ensure_3ch(img):
-            if img is None:
-                return np.zeros((H, W, 3), dtype=np.uint8)
-            arr = np.array(img)
-            # if mask single channel, convert to 3ch visual (bitwise_and expects mask)
-            if arr.ndim == 2:
-                # put mask on orig_img for visual
-                vis = cv2.bitwise_and(orig_img, orig_img, mask=arr.astype(np.uint8))
-                return vis
-            if arr.ndim == 3 and arr.shape[2] == 1:
-                vis = cv2.bitwise_and(orig_img, orig_img, mask=arr[:,:,0].astype(np.uint8))
-                return vis
-            # if arr has same H/W but BGR already, ensure dtype uint8
-            # if arr shape differs, resize to orig
-            if arr.shape[0] != H or arr.shape[1] != W:
-                try:
-                    arr = cv2.resize(arr, (W, H), interpolation=cv2.INTER_AREA)
-                except Exception:
-                    arr = cv2.resize(arr, (W, H), interpolation=cv2.INTER_NEAREST)
-            if arr.dtype != np.uint8:
-                arr = arr.astype(np.uint8)
-            # if grayscale 2D converted earlier, otherwise keep BGR
-            if arr.ndim == 3 and arr.shape[2] == 3:
-                return arr
-            # otherwise fallback to orig copy
-            return orig_img.copy()
-
-        # original with bbox
+        # 1) Original + bbox
         img_vis = orig_img.copy()
         if face_box is not None:
-            try:
-                x, y, w, h = face_box
-                cv2.rectangle(img_vis, (x,y), (x+w, y+h), (0,255,0), 2)
-            except Exception:
-                pass
+            x, y, w, h = face_box
+            cv2.rectangle(img_vis, (x,y), (x+w,y+h), (0,255,0), 2)
 
-        grab_vis = ensure_3ch(grab_mask255)
-        he_vis = ensure_3ch(he_img)
-        hsv_vis = ensure_3ch(mask_hsv)
-        ycb_vis = ensure_3ch(mask_ycrcb)
-        otsu_vis = ensure_3ch(otsu_mask)
-        final_vis = ensure_3ch(final_mask)
+        # 2) GrabCut
+        gm = grab_mask255.astype(np.uint8)
+        if gm.max() <= 1: gm = gm * 255
+        grab_vis = cv2.bitwise_and(orig_img, orig_img, mask=gm)
 
-        # dominant color patch (square)
+        # 3) HE
+        he_vis = he_img.copy() if he_img is not None else np.zeros_like(orig_img)
+
+        # 4) Final mask applied to HE
+        fm = final_mask.astype(np.uint8)
+        if fm.max() <= 1: fm = fm * 255
+        final_mask_he_vis = cv2.bitwise_and(he_vis, he_vis, mask=fm)
+
+        # 5) HE segmented 
+        he_masked_vis = final_mask_he_vis.copy()
+
+        # 6) Color patch
         R, G, B = dom_rgb
-        dom_patch = np.full((max(100, H//4), max(100, W//6), 3), (int(B), int(G), int(R)), dtype=np.uint8)
+        color_patch = np.full((max(80,H//3), max(80,W//6),3),
+                              (int(B),int(G),int(R)), dtype=np.uint8)
 
-        # -------------------------------
-        # Prepare list and resize to uniform height
-        # -------------------------------
         debug_imgs = [
-            img_vis,         # original with bbox
-            grab_vis,        # grabcut overlay-like (already bitwise_and with orig if mask)
-            he_vis,          # HE result
-            otsu_vis,        # otsu mask visual
-            hsv_vis,         # hsv mask visual
-            ycb_vis,         # ycrcb mask visual
-            final_vis,       # final mask visual
-            dom_patch        # dominant color
+            img_vis,
+            grab_vis,
+            he_vis,
+            final_mask_he_vis,
+            he_masked_vis,
+            color_patch
         ]
 
-        # choose target height relative to original but clamp to avoid huge images
-        TARGET_H = int(np.clip(H, 240, 600))  # use original height but clamp
+        # Resize
+        TARGET_H = int(np.clip(H, 240, 600))
         resized = []
         for im in debug_imgs:
             h, w = im.shape[:2]
-            if h == 0 or w == 0:
-                im2 = np.zeros((TARGET_H, TARGET_H, 3), dtype=np.uint8)
-            else:
-                scale = TARGET_H / h
-                new_w = max(1, int(w * scale))
-                im2 = cv2.resize(im, (new_w, TARGET_H), interpolation=cv2.INTER_AREA)
-            # ensure 3 channels
-            if im2.ndim == 2:
-                im2 = cv2.cvtColor(im2, cv2.COLOR_GRAY2BGR)
-            if im2.shape[2] == 1:
-                im2 = cv2.cvtColor(im2[:,:,0], cv2.COLOR_GRAY2BGR)
+            scale = TARGET_H / h
+            im2 = cv2.resize(im, (int(w*scale), TARGET_H))
             resized.append(im2)
 
-        # -------------------------------
-        # Build grid: make two rows as balanced as possible
-        # -------------------------------
-        n = len(resized)
-        # split into two rows: first gets ceil(n/2)
-        k = (n + 1) // 2
-        row1_list = resized[:k]
-        row2_list = resized[k:]
+        # Grid 2×3
+        row1 = np.hstack(resized[:3])
+        row2 = np.hstack(resized[3:])
 
-        # horizontally stack images in each row
-        def hstack_fill(lst):
-            if len(lst) == 0:
-                return np.zeros((TARGET_H, TARGET_H, 3), dtype=np.uint8)
-            # To avoid tiny differences in heights (should be same), ensure same height already
-            return np.hstack(lst)
-
-        row1 = hstack_fill(row1_list)
-        row2 = hstack_fill(row2_list)
-
-        # make row widths equal by padding smaller row with black
-        w1 = row1.shape[1]
-        w2 = row2.shape[1]
+        w1, w2 = row1.shape[1], row2.shape[1]
         if w1 > w2:
-            pad = np.zeros((TARGET_H, w1 - w2, 3), dtype=np.uint8)
-            row2 = np.hstack([row2, pad])
+            row2 = np.hstack([row2, np.zeros((TARGET_H, w1-w2, 3), np.uint8)])
         elif w2 > w1:
-            pad = np.zeros((TARGET_H, w2 - w1, 3), dtype=np.uint8)
-            row1 = np.hstack([row1, pad])
+            row1 = np.hstack([row1, np.zeros((TARGET_H, w2-w1, 3), np.uint8)])
 
         grid = np.vstack([row1, row2])
 
-        # -------------------------------
-        # Save image as PNG (force extension)
-        # -------------------------------
-        safe_fname = f"debug_{os.path.splitext(fname)[0]}.png"
-        save_path = os.path.join(base, safe_fname)
-        ok = cv2.imwrite(save_path, grid)
-        if not ok:
-            print(f"Failed to write debug image (cv2.imwrite returned False): {save_path}")
-        else:
-            # optional: print saved path (comment out if verbose)
-            # print(f"Saved debug visual: {save_path}")
-            pass
+        save_path = os.path.join(base, f"debug_{os.path.splitext(fname)[0]}.png")
+        cv2.imwrite(save_path, grid)
 
     except Exception as e:
         print("Failed to save debug visuals:", e)
