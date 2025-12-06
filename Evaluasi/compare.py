@@ -17,10 +17,15 @@ def compute_stats(df):
         "above_20_count": above_20,
         "below_20_percent": (below_20 / total) * 100,
         "above_20_percent": (above_20 / total) * 100,
-        # Statistik 
+
+        # Statistik
         "mean": df["DeltaE"].mean(),
         "median": df["DeltaE"].median(),
-        "std": df["DeltaE"].std()
+        "std": df["DeltaE"].std(),
+
+        # Data Terbesar dan Terkecil
+        "min": df["DeltaE"].min(),
+        "max": df["DeltaE"].max()
     }
 
 clahe_stats = compute_stats(clahe)
@@ -31,25 +36,29 @@ print("\nPerbandingan Persentase DeltaE\n")
 
 print(">> CLAHE")
 print(f"DeltaE <= 20 : {clahe_stats['below_20_count']} data ({clahe_stats['below_20_percent']:.2f}%)")
-print(f"DeltaE > 20: {clahe_stats['above_20_count']} data ({clahe_stats['above_20_percent']:.2f}%)")
+print(f"DeltaE > 20 : {clahe_stats['above_20_count']} data ({clahe_stats['above_20_percent']:.2f}%)")
 
 print("\n>> HE")
 print(f"DeltaE <= 20 : {he_stats['below_20_count']} data ({he_stats['below_20_percent']:.2f}%)")
-print(f"DeltaE > 20: {he_stats['above_20_count']} data ({he_stats['above_20_percent']:.2f}%)")
+print(f"DeltaE > 20 : {he_stats['above_20_count']} data ({he_stats['above_20_percent']:.2f}%)")
 
-# Statistik 
+# Statistik
 print("\nStatistik Nilai DeltaE")
 print("\n>> CLAHE")
 print(f"Mean DeltaE   : {clahe_stats['mean']:.2f}")
 print(f"Median DeltaE : {clahe_stats['median']:.2f}")
 print(f"Std Dev       : {clahe_stats['std']:.2f}")
+print(f"Min DeltaE    : {clahe_stats['min']:.2f}")
+print(f"Max DeltaE    : {clahe_stats['max']:.2f}")
 
 print("\n>> HE")
 print(f"Mean DeltaE   : {he_stats['mean']:.2f}")
 print(f"Median DeltaE : {he_stats['median']:.2f}")
 print(f"Std Dev       : {he_stats['std']:.2f}")
+print(f"Min DeltaE    : {he_stats['min']:.2f}")
+print(f"Max DeltaE    : {he_stats['max']:.2f}")
 
-# Hasil Akhir
+# Kesimpulan
 print("\nKesimpulan")
 
 if clahe_stats["mean"] < he_stats["mean"]:
